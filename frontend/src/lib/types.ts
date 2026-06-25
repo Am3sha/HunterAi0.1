@@ -27,10 +27,24 @@ export interface Endpoint {
   source: string | null;
 }
 
+export interface Finding {
+  id: string;
+  plugin: string;
+  name: string;
+  severity: string;
+  target: string;
+  description: string;
+  confidence: string;
+  evidence: string | null;
+  references: string[];
+  metadata: Record<string, string>;
+}
+
 export interface ScanCounts {
   subdomains: number;
   services: number;
   endpoints: number;
+  findings: number;
 }
 
 /** Response of POST /scans. */
@@ -54,6 +68,7 @@ export interface ScanDetail {
   subdomains: Subdomain[];
   services: HttpService[];
   endpoints: Endpoint[];
+  findings: Finding[];
 }
 
 export const TERMINAL_STATUSES: ScanStatus[] = ["completed", "failed"];

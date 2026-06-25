@@ -1,15 +1,24 @@
 import { ResultsCard } from "@/components/scan/results-card";
 import {
   EndpointsTable,
+  FindingsTable,
   ServicesTable,
   SubdomainsTable,
 } from "@/components/scan/result-tables";
 import type { ScanDetail } from "@/lib/types";
 
-/** Renders the three recon result sections for a scan. */
+/** Renders scan results, findings first. */
 export function ScanResults({ scan }: { scan: ScanDetail }) {
   return (
     <div className="space-y-4">
+      <ResultsCard
+        title="Findings"
+        count={scan.findings.length}
+        emptyText="No findings yet."
+      >
+        <FindingsTable rows={scan.findings} />
+      </ResultsCard>
+
       <ResultsCard
         title="Live HTTP services"
         count={scan.services.length}

@@ -28,10 +28,23 @@ KATANA_VERSION = "1.6.1"
 _PD_PLATFORMS = ("linux/amd64", "linux/arm64")
 
 
-def _pd_sources(repo: str, name: str, version: str) -> dict[str, BinarySource]:
-    """Build per-platform sources for a ProjectDiscovery release."""
+def _pd_sources(
+    repo: str,
+    name: str,
+    version: str,
+    checksum_sep: str = "_",
+) -> dict[str, BinarySource]:
+    """Build per-platform sources for a ProjectDiscovery release.
+
+    Args:
+        repo: ProjectDiscovery repository name
+        name: Tool name (used in asset filenames)
+        version: Tool version
+        checksum_sep: Separator between name/version in checksums filename
+            (use "_" for most tools, "-" for katana v1.6.1+)
+    """
     base = f"https://github.com/projectdiscovery/{repo}/releases/download/v{version}"
-    checksums_url = f"{base}/{name}_{version}_checksums.txt"
+    checksums_url = f"{base}/{name}{checksum_sep}{version}{checksum_sep}checksums.txt"
     sources: dict[str, BinarySource] = {}
     for plat in _PD_PLATFORMS:
         arch = plat.split("/", 1)[1]
@@ -63,7 +76,7 @@ _SPECS: dict[str, ToolSpec] = {
         name="katana",
         version=KATANA_VERSION,
         description="Web crawling and endpoint discovery.",
-        sources=_pd_sources("katana", "katana", KATANA_VERSION),
+        sources=_pd_sources("katana", "katana", KATANA_VERSION, checksum_sep="-"),
     ),
 }
 

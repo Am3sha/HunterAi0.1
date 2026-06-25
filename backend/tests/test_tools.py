@@ -37,6 +37,37 @@ def test_registry_sources_for_linux_amd64_are_wellformed() -> None:
         assert source.archive_member == spec.name
 
 
+def test_registry_checksum_urls_are_correct() -> None:
+    """Regression test to ensure subfinder/httpx/katana checksum URLs match GitHub's actual filenames.
+
+    This prevents future regressions like katana v1.6.1's hyphen-separated filename."""
+    registry = ToolRegistry()
+
+    # Subfinder uses underscore separator
+    subfinder = registry.get("subfinder")
+    subfinder_source = subfinder.source_for("linux/amd64")
+    assert subfinder_source is not None
+    assert subfinder_source.checksums_url == (
+        "https://github.com/projectdiscovery/subfinder/releases/download/v2.14.0/subfinder_2.14.0_checksums.txt"
+    )
+
+    # Httpx uses underscore separator
+    httpx = registry.get("httpx")
+    httpx_source = httpx.source_for("linux/amd64")
+    assert httpx_source is not None
+    assert httpx_source.checksums_url == (
+        "https://github.com/projectdiscovery/httpx/releases/download/v1.9.0/httpx_1.9.0_checksums.txt"
+    )
+
+    # Katana uses hyphen separator
+    katana = registry.get("katana")
+    katana_source = katana.source_for("linux/amd64")
+    assert katana_source is not None
+    assert katana_source.checksums_url == (
+        "https://github.com/projectdiscovery/katana/releases/download/v1.6.1/katana-1.6.1-checksums.txt"
+    )
+
+
 def test_registry_unknown_tool_raises() -> None:
     with pytest.raises(ToolNotInRegistryError):
         ToolRegistry().get("nuclei")

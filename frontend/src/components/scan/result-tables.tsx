@@ -8,7 +8,18 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { HttpStatusBadge } from "@/components/scan/status-badge";
-import type { Endpoint, HttpService, Subdomain } from "@/lib/types";
+import type { Endpoint, Finding, HttpService, Subdomain } from "@/lib/types";
+
+function SeverityBadge({ severity }: { severity: string }) {
+  const variants: Record<string, "destructive" | "default" | "secondary" | "outline"> = {
+    critical: "destructive",
+    high: "destructive",
+    medium: "default",
+    low: "secondary",
+    info: "outline",
+  };
+  return <Badge variant={variants[severity] ?? "outline"}>{severity}</Badge>;
+}
 
 function ExternalLink({ href }: { href: string }) {
   return (
@@ -103,6 +114,40 @@ export function EndpointsTable({ rows }: { rows: Endpoint[] }) {
             <TableCell>
               <ExternalLink href={row.url} />
             </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+export function FindingsTable({ rows }: { rows: Finding[] }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-24">Severity</TableHead>
+          <TableHead>Finding</TableHead>
+          <TableHead>Target</TableHead>
+          <TableHead className="w-32">Plugin</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.id}>
+            <TableCell>
+              <SeverityBadge severity={row.severity} />
+            </TableCell>
+            <TableCell>
+              <div className="font-medium">{row.name}</div>
+              {row.description && (
+                <p className="text-sm text-muted-foreground">{row.description}</p>
+              )}
+            </TableCell>
+            <TableCell>
+              <ExternalLink href={row.target} />
+            </TableCell>
+            <TableCell className="text-sm text-muted-foreground">{row.plugin}</TableCell>
           </TableRow>
         ))}
       </TableBody>
