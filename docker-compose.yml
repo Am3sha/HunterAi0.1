@@ -1,0 +1,23 @@
+# Optional: local PostgreSQL for HunterAI development.
+# Docker is NOT required to run HunterAI, but this is a convenient way to get a
+# database. Start it with:  docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hunterai-db
+    environment:
+      POSTGRES_USER: hunterai
+      POSTGRES_PASSWORD: hunterai
+      POSTGRES_DB: hunterai
+    ports:
+      - "5432:5432"
+    volumes:
+      - hunterai_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hunterai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  hunterai_pgdata:

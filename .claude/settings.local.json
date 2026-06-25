@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile app/main.py app/core/config.py app/core/logging.py app/interfaces/api/router.py app/interfaces/api/routes/health.py tests/test_health.py)",
+      "Read(//e/e/HunterAI/**)",
+      "Bash(python -c \"import fastapi, pydantic, pydantic_settings, pytest; print\\('deps present'\\)\")",
+      "Bash(python -m venv .venv-check)",
+      "Bash(./.venv-check/Scripts/python.exe -m pip install -q fastapi pydantic-settings pytest)",
+      "Bash(./.venv-check/Scripts/python.exe -m pytest -q)",
+      "Bash(./.venv-check/Scripts/python.exe -m pip install -q fastapi pydantic-settings pytest pytest-asyncio httpx)",
+      "Bash(./.venv-check/Scripts/python.exe -m pip install -q fastapi pydantic-settings \"SQLAlchemy>=2.0\" pytest pytest-asyncio httpx)",
+      "Bash(npm -v)",
+      "Bash(npm install *)",
+      "Bash(npm run *)"
+    ]
+  }
+}
