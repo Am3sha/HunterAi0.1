@@ -4,7 +4,7 @@
 > right now." If you are a new session resuming work, read this file top to
 > bottom, then `ARCHITECTURE.md` and `ROADMAP.md`.
 
-_Last updated: end of Sprint 1, Milestone 2._
+_Last updated: Sprint 2, Milestone 1._
 
 ---
 
@@ -23,14 +23,18 @@ scanner**. No AI is implemented yet — that is deliberately deferred.
   **All builds/tests/runs happen inside WSL/Linux**, never native Windows.
 - **Monorepo:** `backend/` (FastAPI, Clean Architecture), `frontend/` (Next.js 14),
   `docs/`.
-- **Tests:** 56 passing (backend). There is no committed git history; the working
+- **Tests:** 90 passing (backend). There is no committed git history; the working
   tree is the state. Run tests in a venv (see `TOOLCHAIN.md`).
-- **Where we are:** Sprint 0 complete (recon MVP). Sprint 1: **M1 done**
-  (plugin scanner engine), **M2 done** (engine integrated into the scan pipeline,
-  findings persisted + in API). **Next up: Sprint 1 M3 = first real scanner
-  plugins.**
-- **Important:** the scanner engine ships with **zero plugins**, so a scan
-  currently returns `findings: []`. The whole path is proven and waiting for M3.
+- **Where we are:** Sprint 0 complete (recon MVP). **Sprint 1 complete** —
+  plugin scanner engine (M1), pipeline integration (M2), and **five live
+  read-only plugins** (M3: security-headers, cookie-security, cors, clickjacking,
+  tls-hygiene) over a shared scope-enforcing HTTP client. **Sprint 2: M1 done**
+  (infrastructure seams — HTTP timing, `ScannerConfig`, `ScanContext` tools/config
+  injection, param utilities). **Next up: Sprint 2 M2 = advanced Finding model
+  (CVSS/CWE/OWASP/remediation/…).**
+- **Important:** a scan now produces real findings from the five plugins. The
+  Sprint 2 M1 seams (`tools`, `config`, `elapsed_ms`, `_params`) are scaffolding
+  for later milestones (XSS/SQLi/ffuf) and are not yet consumed by any plugin.
 - **Golden rule:** preserve Clean Architecture boundaries, the existing coding
   style, and the test-first philosophy. Build milestone-by-milestone; stop for
   review after each.
@@ -55,16 +59,16 @@ GET /api/v1/scans/{id}  (frontend polls every 2s)
 - **Persistence:** PostgreSQL (prod) / SQLite (tests); Alembic migrations
   `0001_initial`, `0002_findings`.
 - **Frontend:** target input → start scan → poll → display subdomains / services /
-  endpoints. **Does not display findings yet** (deferred to M4).
+  endpoints, **and findings** (severity-grouped `FindingsTable`).
 
 ## 4. What is NOT implemented (explicitly out, so far)
 
 | Area | Status |
 |------|--------|
 | AI / LLM / agents | Not started (future; see `AGENTS_FUTURE.md`) |
-| Real vulnerability plugins | **Next milestone (M3)** — none exist yet |
-| Frontend findings display | Deferred to Sprint 1 M4 |
-| Report generation | Not started |
+| Advanced Finding fields (CVSS/CWE/OWASP/remediation) | **Next milestone (Sprint 2 M2)** |
+| Payload plugins (XSS, SQLi) / ffuf discovery | Sprint 2 M3–M5 (seams ready) |
+| Report generation | Not started (Sprint 2 M7) |
 | Authentication / multi-user | Not started |
 | Memory / knowledge base | Planned (see `KNOWLEDGE_BASE_PLAN.md`) |
 | Browser automation | Not started |
@@ -84,7 +88,7 @@ HunterAI/
 │   │   ├── main.py          app factory
 │   │   └── *_cli.py         tools_cli, recon_cli, scanner_cli, db_cli
 │   ├── alembic/             migrations (0001_initial, 0002_findings)
-│   └── tests/               56 tests
+│   └── tests/               90 tests
 ├── frontend/                Next.js 14 App Router + TS + Tailwind + shadcn/ui
 ├── docs/                    ← you are here
 └── docker-compose.yml       optional local Postgres
@@ -111,7 +115,7 @@ cp .env.local.example .env.local
 npm install && npm run dev      # http://localhost:3000
 
 # Tests
-cd backend && pytest -q         # 56 passing
+cd backend && pytest -q         # 90 passing
 ```
 
 ## 7. Known caveats / gotchas
@@ -128,7 +132,7 @@ cd backend && pytest -q         # 56 passing
 
 ## 8. Immediate next step
 
-**Sprint 1, Milestone 3 — first real scanner plugins.** Each plugin is one new
-file under `backend/app/infrastructure/scanner/plugins/`, decorated with
-`@register_plugin`; no existing code changes. See `PLUGIN_DEVELOPMENT.md` and
-`SPRINT_1_PLAN.md`.
+**Sprint 2, Milestone 2 — advanced Finding model.** Upgrade `Finding` with
+CVSS / CWE / OWASP / remediation / richer references + metadata, propagate through
+persistence + API, keep the frontend and existing 5 plugins working. See
+`ROADMAP.md` (Sprint 2 plan) and `DECISIONS.md`.

@@ -54,6 +54,9 @@ class HttpResponse:
     body: str = ""
     requested_url: str | None = None
     """The URL originally requested (differs from ``url`` if redirected)."""
+    elapsed_ms: float = 0.0
+    """Approximate wall-clock time for the request, in milliseconds. Populated by
+    the HTTP client; intended for future time-based heuristics. 0.0 if unmeasured."""
 
     @property
     def redirected(self) -> bool:

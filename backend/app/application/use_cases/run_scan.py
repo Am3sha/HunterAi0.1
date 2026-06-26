@@ -23,8 +23,10 @@ from app.application.use_cases.run_vulnerability_scan import ScannerEngine
 from app.core.logging import get_logger
 from app.domain.entities.scan import Scan, ScanStatus
 from app.domain.entities.scanner import ScanContext
+from app.domain.entities.scanner_config import ScannerConfig
 from app.domain.entities.target import Target
 from app.domain.ports.http import HttpClient
+from app.domain.ports.tools import ToolManagerPort
 
 logger = get_logger(__name__)
 
@@ -44,11 +46,15 @@ class RunScanUseCase:
         engine: ScannerEngine,
         *,
         http_client: HttpClient | None = None,
+        tools: ToolManagerPort | None = None,
+        config: ScannerConfig | None = None,
         clock: Clock = _utcnow,
     ) -> None:
         self._recon = recon
         self._engine = engine
         self._http_client = http_client
+        self._tools = tools
+        self._config = config
         self._clock = clock
 
     def execute(self, target: Target, scan: Scan | None = None) -> Scan:
@@ -56,7 +62,9 @@ class RunScanUseCase:
         if scan.status is not ScanStatus.COMPLETED:
             return scan  # recon failed; nothing to scan
 
-        context = ScanContext.from_scan(scan, http=self._http_client)
+        context = ScanContext.from_scan(
+            scan, http=self._http_client, tools=self._tools, config=self._config
+        )
         result = self._engine.run(context)
         scan.findings = list(result.findings)
         # Re-stamp completion to reflect the end of scanning (not just recon).

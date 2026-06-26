@@ -8,27 +8,32 @@ for review after each.
 Clean foundation: tool management, recon pipeline, persistence, API, frontend.
 See `SPRINT_0_SUMMARY.md`.
 
-## Sprint 1 — Modular Vulnerability Scanner (in progress)
+## Sprint 1 — Modular Vulnerability Scanner ✅ (complete)
 Goal: transform the recon framework into a modular vulnerability scanner.
 
 | # | Milestone | Status |
 |---|-----------|--------|
 | M1 | Plugin-based scanner engine (framework only) | ✅ done |
 | M2 | Integrate engine into the scan pipeline (persist + API findings) | ✅ done |
-| M3 | First real scanner plugins (e.g. security-headers, cookie/TLS misconfig) | ⏳ next |
-| M4 | Frontend findings display (severity-grouped) | planned |
+| M3 | First real scanner plugins (security-headers, cookie-security, cors, clickjacking, tls-hygiene) over a shared read-only HTTP client | ✅ done |
 
+Frontend findings display (severity-grouped `FindingsTable`) also shipped.
 Detail: `SPRINT_1_PLAN.md`.
 
-## Sprint 2 — Depth & usability (tentative)
-- More plugins (tech-specific checks, exposed files/dirs via ffuf, Nuclei templates).
-- Plugin enable/disable + per-scan configuration via API/UI.
-- Findings filtering/sorting, dedup, severity rollups in UI.
-- Begin the knowledge base (see `KNOWLEDGE_BASE_PLAN.md`).
+## Sprint 2 — Professional Vulnerability Scanner (in progress)
+Official approved plan. Fixed implementation order; one milestone at a time.
 
-## Sprint 3+ — Reporting & evidence (tentative)
-- Professional report generation (Markdown/PDF) from findings + evidence ledger.
-- Evidence capture (request/response) attached to findings for reproducibility.
+| # | Milestone | Status |
+|---|-----------|--------|
+| M1 | Scanner infrastructure seams (HTTP timing, `ScannerConfig`, `ScanContext` tools/config DI, param utils) | ✅ done |
+| M2 | Advanced Finding model (CVSS, CWE, OWASP, confidence, evidence, references, remediation, metadata) | ⏳ next |
+| M3 | XSS plugin (safe detection only) | planned |
+| M4 | SQL Injection plugin (safe error/time-based) | planned |
+| M5 | Sensitive files discovery (ffuf integration) | planned |
+| M6 | Risk scoring engine | planned |
+| M7 | Professional reporting (Markdown/JSON; PDF-ready) | planned |
+| M8 | Dashboard improvements (filters, charts, stats) | planned |
+| M9 | Knowledge base foundation (architecture only, no AI) | planned |
 
 ## Later — AI / agents (deferred, see `AGENTS_FUTURE.md`)
 - Planner/orchestrator that decides next actions; specialized agents (Recon, API,

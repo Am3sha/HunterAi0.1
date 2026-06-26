@@ -134,3 +134,40 @@ findings is deferred to M4.
 
 > After adding the `findings` table, run `alembic upgrade head` (or
 > `python -m app.db_cli init` on a fresh dev database).
+
+---
+
+## Sprint 1 M3 — live-request plugins (shipped)
+
+Five read-only plugins now ship under `infrastructure/scanner/plugins/`:
+`security_headers`, `cookie_security`, `cors`, `clickjacking`, `tls_hygiene`.
+They share a **scope-enforcing, read-only HTTP client** (`HttpClient` port,
+`infrastructure/http`) injected via `ScanContext.http`. See
+`docs/PLUGIN_DEVELOPMENT.md`.
+
+---
+
+## Sprint 2 M1 — infrastructure seams (shipped)
+
+Additive architecture work to support future advanced plugins. **No behaviour
+change**, no new vulnerability plugins, existing 5 plugins untouched.
+
+- **HTTP timing.** `HttpResponse.elapsed_ms` (approx. wall-clock per request) is
+  now populated by `UrllibHttpClient`. Foundation for future time-based
+  heuristics; no plugin consumes it yet. Default `0.0`.
+- **`ScannerConfig`** (`domain/entities/scanner_config.py`) — injectable
+  limits/timeouts (`request_timeout=5.0`, `max_services=25`, `max_endpoints=50`).
+  Defaults equal the historical constants, so nothing changes at runtime.
+- **`ScanContext` capabilities.** Now also carries (all optional, `compare=False`):
+  - `tools: ToolManagerPort | None` — managed-tool runner, injected exactly like
+    `http` (prepares ffuf-based plugins; M5).
+  - `config: ScannerConfig` — per-scan limits (default applied).
+  - `parameterized_endpoints()` — view of endpoints with a query string (for
+    future param-based plugins). Pure data view; no requests, no payloads.
+- **Param utilities** (`infrastructure/scanner/plugins/_params.py`) — payload-free
+  URL/query helpers: `query_params`, `param_names`, `has_query_params`,
+  `with_param_value`, `base_url`. No detection logic.
+- **Wiring.** `RunScanUseCase` accepts `tools` / `config` and passes them into
+  `ScanContext.from_scan(...)`; `execute_scan` injects the existing `ToolManager`.
+
+These are seams only — XSS/SQLi/ffuf/scoring/reporting are later milestones.

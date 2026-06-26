@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import ssl
+import time
 import urllib.error
 import urllib.request
 
@@ -65,17 +66,26 @@ class UrllibHttpClient(HttpClient):
         # Default context verifies TLS; we only READ, so verification failures are
         # surfaced as errors (a plugin may still note plaintext/redirect behaviour).
         context = ssl.create_default_context()
+        started = time.monotonic()
         try:
             with urllib.request.urlopen(request, timeout=effective_timeout, context=context) as resp:
-                return self._to_response(url, resp.geturl(), resp.status, resp.headers, resp, method)
+                elapsed_ms = (time.monotonic() - started) * 1000.0
+                return self._to_response(
+                    url, resp.geturl(), resp.status, resp.headers, resp, method, elapsed_ms
+                )
         except urllib.error.HTTPError as exc:
             # 4xx/5xx still carry headers worth inspecting.
-            return self._to_response(url, exc.geturl(), exc.code, exc.headers, exc, method)
+            elapsed_ms = (time.monotonic() - started) * 1000.0
+            return self._to_response(
+                url, exc.geturl(), exc.code, exc.headers, exc, method, elapsed_ms
+            )
         except (urllib.error.URLError, ssl.SSLError, TimeoutError, OSError, ValueError) as exc:
             raise HttpClientError(f"{method} {url} failed: {exc}") from exc
 
     @staticmethod
-    def _to_response(requested_url, final_url, status, raw_headers, stream, method) -> HttpResponse:
+    def _to_response(
+        requested_url, final_url, status, raw_headers, stream, method, elapsed_ms
+    ) -> HttpResponse:
         items = list(raw_headers.items()) if raw_headers is not None else []
         body = ""
         if method != "HEAD":
@@ -89,6 +99,7 @@ class UrllibHttpClient(HttpClient):
             headers=HttpHeaders(items),
             body=body,
             requested_url=requested_url,
+            elapsed_ms=elapsed_ms,
         )
 
 

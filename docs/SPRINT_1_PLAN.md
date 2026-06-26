@@ -24,7 +24,7 @@ scan; no separate resource).
 - API: `GET /scans/{id}` returns `findings[]`.
 - 56/56 tests. **Findings empty until M3** (no plugins yet).
 
-### M3 — First real scanner plugins ⏳ NEXT
+### M3 — First real scanner plugins ✅ done
 Implement the first genuine detections using the M2 pipeline. Each plugin is **one
 new file** under `infrastructure/scanner/plugins/` (see `PLUGIN_DEVELOPMENT.md`).
 

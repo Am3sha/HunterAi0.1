@@ -13,10 +13,12 @@ from typing import TYPE_CHECKING
 
 from app.domain.entities.finding import Finding, Severity
 from app.domain.entities.recon import Endpoint, HttpService, Subdomain
+from app.domain.entities.scanner_config import ScannerConfig
 
 if TYPE_CHECKING:
     from app.domain.entities.scan import Scan
     from app.domain.ports.http import HttpClient
+    from app.domain.ports.tools import ToolManagerPort
 
 
 class PluginCategory(str, Enum):
@@ -58,6 +60,11 @@ class ScanContext:
     http: "HttpClient | None" = field(default=None, compare=False)
     """Shared, scope-enforcing, read-only HTTP client. ``None`` => no live
     requests available (plugins must degrade gracefully)."""
+    tools: "ToolManagerPort | None" = field(default=None, compare=False)
+    """Shared managed-tool runner (e.g. for future ffuf-based plugins). ``None``
+    => tool execution unavailable (plugins must degrade gracefully)."""
+    config: ScannerConfig = field(default_factory=ScannerConfig, compare=False)
+    """Per-scan limits/timeouts. Defaults match historical behaviour."""
 
     @property
     def service_urls(self) -> list[str]:
@@ -67,8 +74,23 @@ class ScanContext:
     def endpoint_urls(self) -> list[str]:
         return [endpoint.url for endpoint in self.endpoints]
 
+    def parameterized_endpoints(self) -> list[Endpoint]:
+        """Endpoints whose URL carries a query string (``?a=b``).
+
+        Convenience for future plugins that test request parameters. Purely a
+        view over existing data — no requests, no payloads.
+        """
+        return [e for e in self.endpoints if "?" in e.url and e.url.split("?", 1)[1]]
+
     @classmethod
-    def from_scan(cls, scan: "Scan", http: "HttpClient | None" = None) -> "ScanContext":
+    def from_scan(
+        cls,
+        scan: "Scan",
+        http: "HttpClient | None" = None,
+        *,
+        tools: "ToolManagerPort | None" = None,
+        config: ScannerConfig | None = None,
+    ) -> "ScanContext":
         """Build a context from a recon Scan's results."""
         return cls(
             target_domain=scan.target_domain,
@@ -76,6 +98,8 @@ class ScanContext:
             endpoints=tuple(scan.endpoints),
             subdomains=tuple(scan.subdomains),
             http=http,
+            tools=tools,
+            config=config or ScannerConfig(),
         )
 
 

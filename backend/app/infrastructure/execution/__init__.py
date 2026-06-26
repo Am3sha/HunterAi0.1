@@ -72,10 +72,14 @@ def execute_scan(scan_id: UUID) -> None:
         target = Target(
             id=scan.target_id, domain=scan.target_domain, created_at=scan.created_at
         )
-        recon = RunReconUseCase(*build_recon_pipeline(build_tool_manager()))
+        tool_manager = build_tool_manager()
+        recon = RunReconUseCase(*build_recon_pipeline(tool_manager))
         http_client = build_scoped_http_client(TargetScope.from_hosts({scan.target_domain}))
         RunScanUseCase(
-            recon, _build_scanner_engine(), http_client=http_client
+            recon,
+            _build_scanner_engine(),
+            http_client=http_client,
+            tools=tool_manager,
         ).execute(target, scan=scan)
         repo.update(scan)
         logger.info("execute_scan: scan %s finished as %s", scan_id, scan.status.value)
