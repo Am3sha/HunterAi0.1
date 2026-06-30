@@ -23,18 +23,19 @@ scanner**. No AI is implemented yet — that is deliberately deferred.
   **All builds/tests/runs happen inside WSL/Linux**, never native Windows.
 - **Monorepo:** `backend/` (FastAPI, Clean Architecture), `frontend/` (Next.js 14),
   `docs/`.
-- **Tests:** 90 passing (backend). There is no committed git history; the working
+- **Tests:** 96 passing (backend). There is no committed git history; the working
   tree is the state. Run tests in a venv (see `TOOLCHAIN.md`).
 - **Where we are:** Sprint 0 complete (recon MVP). **Sprint 1 complete** —
   plugin scanner engine (M1), pipeline integration (M2), and **five live
   read-only plugins** (M3: security-headers, cookie-security, cors, clickjacking,
   tls-hygiene) over a shared scope-enforcing HTTP client. **Sprint 2: M1 done**
   (infrastructure seams — HTTP timing, `ScannerConfig`, `ScanContext` tools/config
-  injection, param utilities). **Next up: Sprint 2 M2 = advanced Finding model
-  (CVSS/CWE/OWASP/remediation/…).**
+  injection, param utilities). **Sprint 2 M2 done** (Advanced Finding model —
+  CVSS/CWE/OWASP/remediation/… persisted, in API, and displayed in UI).
+  **Next up: Sprint 2 M3 = XSS plugin (safe detection).**
 - **Important:** a scan now produces real findings from the five plugins. The
-  Sprint 2 M1 seams (`tools`, `config`, `elapsed_ms`, `_params`) are scaffolding
-  for later milestones (XSS/SQLi/ffuf) and are not yet consumed by any plugin.
+  Sprint 2 M1 seams (`tools`, `config`, `elapsed_ms`, `_params`) and the M2
+  enriched `Finding` model are scaffolding for later milestones (XSS/SQLi/ffuf).
 - **Golden rule:** preserve Clean Architecture boundaries, the existing coding
   style, and the test-first philosophy. Build milestone-by-milestone; stop for
   review after each.
@@ -115,7 +116,7 @@ cp .env.local.example .env.local
 npm install && npm run dev      # http://localhost:3000
 
 # Tests
-cd backend && pytest -q         # 90 passing
+cd backend && pytest -q         # 96 passing
 ```
 
 ## 7. Known caveats / gotchas
@@ -132,7 +133,8 @@ cd backend && pytest -q         # 90 passing
 
 ## 8. Immediate next step
 
-**Sprint 2, Milestone 2 — advanced Finding model.** Upgrade `Finding` with
-CVSS / CWE / OWASP / remediation / richer references + metadata, propagate through
-persistence + API, keep the frontend and existing 5 plugins working. See
-`ROADMAP.md` (Sprint 2 plan) and `DECISIONS.md`.
+**Sprint 2, Milestone 3 — XSS plugin (safe detection).** Implement a read-only
+reflected XSS detection plugin using the enriched Finding model (CVSS, CWE-79,
+A03:2021-Injection, remediation), the shared `HttpClient`, and the
+`parameterized_endpoints()` helper. See `ROADMAP.md` (Sprint 2 M3) and
+`PLUGIN_DEVELOPMENT.md`.

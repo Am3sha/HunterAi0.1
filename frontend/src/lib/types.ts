@@ -38,6 +38,13 @@ export interface Finding {
   evidence: string | null;
   references: string[];
   metadata: Record<string, string>;
+  // Sprint 2 M2
+  cvss_version: string | null;
+  cvss_vector: string | null;
+  cvss_base_score: number | null;
+  cwe_ids: string[];
+  owasp_categories: string[];
+  remediation: string | null;
 }
 
 export interface ScanCounts {

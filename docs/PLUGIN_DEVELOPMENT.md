@@ -78,7 +78,25 @@ Immutability means plugins can't affect each other through shared state.
 
 Fields: `plugin`, `name`, `severity` (`Severity` enum, ordered), `target`,
 `description`, `confidence` (`Confidence`), `evidence`, `references` (tuple),
-`metadata` (dict). Use `self.build_finding(...)` to auto-fill `plugin`.
+`metadata` (dict), plus **Sprint 2 M2 additions**:
+- `cvss: Cvss | None` — CVSS version, vector, base score (all optional)
+- `cwe_ids: tuple[str, ...]` — CWE identifiers (tuple for immutability)
+- `owasp_categories: tuple[str, ...]` — OWASP categories (tuple)
+- `remediation: str | None` — free-text remediation guidance
+
+Use `self.build_finding(...)` to auto-fill `plugin`. Extended signature:
+
+```python
+self.build_finding(
+    name="...",
+    severity=Severity.HIGH,
+    target=service.url,
+    cvss=Cvss(version="3.1", vector="...", base_score=7.5),
+    cwe_ids=["CWE-79"],
+    owasp_categories=["A03:2021-Injection"],
+    remediation="Encode output.",
+)
+```
 
 ## Guidelines
 

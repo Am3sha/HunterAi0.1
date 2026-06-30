@@ -54,6 +54,13 @@ class FindingOut(BaseModel):
     evidence: str | None = None
     references: list[str] = []
     metadata: dict[str, str] = {}
+    # Sprint 2 M2: Advanced classification
+    cvss_version: str | None = None
+    cvss_vector: str | None = None
+    cvss_base_score: float | None = None
+    cwe_ids: list[str] = []
+    owasp_categories: list[str] = []
+    remediation: str | None = None
 
 
 class ScanSummaryResponse(BaseModel):
@@ -124,6 +131,12 @@ class ScanDetailResponse(ScanSummaryResponse):
                     evidence=f.evidence,
                     references=list(f.references),
                     metadata=dict(f.metadata),
+                    cvss_version=f.cvss.version if f.cvss else None,
+                    cvss_vector=f.cvss.vector if f.cvss else None,
+                    cvss_base_score=f.cvss.base_score if f.cvss else None,
+                    cwe_ids=list(f.cwe_ids),
+                    owasp_categories=list(f.owasp_categories),
+                    remediation=f.remediation,
                 )
                 for f in scan.findings
             ],

@@ -26,8 +26,8 @@ Official approved plan. Fixed implementation order; one milestone at a time.
 | # | Milestone | Status |
 |---|-----------|--------|
 | M1 | Scanner infrastructure seams (HTTP timing, `ScannerConfig`, `ScanContext` tools/config DI, param utils) | ✅ done |
-| M2 | Advanced Finding model (CVSS, CWE, OWASP, confidence, evidence, references, remediation, metadata) | ⏳ next |
-| M3 | XSS plugin (safe detection only) | planned |
+| M2 | Advanced Finding model (CVSS, CWE, OWASP, confidence, evidence, references, remediation, metadata) | ✅ done |
+| M3 | XSS plugin (safe detection only) | ⏳ next |
 | M4 | SQL Injection plugin (safe error/time-based) | planned |
 | M5 | Sensitive files discovery (ffuf integration) | planned |
 | M6 | Risk scoring engine | planned |

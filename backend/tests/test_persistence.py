@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.domain.entities.finding import Confidence, Finding, Severity
+from app.domain.entities.finding import Confidence, Cvss, Finding, Severity
 from app.domain.entities.recon import Endpoint, HttpService, Subdomain
 from app.domain.entities.scan import Scan, ScanStatus
 from app.domain.entities.target import Target
@@ -79,6 +79,44 @@ def test_scan_create_then_update_with_results(session_factory) -> None:
     assert finding.confidence is Confidence.HIGH
     assert finding.references == ("https://owasp.org/csp",)
     assert finding.metadata == {"header": "content-security-policy"}
+
+
+def test_finding_advanced_fields_round_trip(session_factory) -> None:
+    session = session_factory()
+    targets = SqlAlchemyTargetRepository(session)
+    scans = SqlAlchemyScanRepository(session)
+
+    target = Target.create("example.com")
+    targets.add(target)
+    scan = Scan.create(target.id, target.domain)
+    scans.add(scan)
+
+    cvss = Cvss(version="3.1", vector="CVSS:3.1/AV:N/AC:L", base_score=7.5)
+    scan.findings = [
+        Finding(
+            plugin="xss",
+            name="Reflected XSS",
+            severity=Severity.HIGH,
+            target="https://example.com/search?q=test",
+            cvss=cvss,
+            cwe_ids=("CWE-79", "CWE-80"),
+            owasp_categories=("A03:2021-Injection",),
+            remediation="Contextually encode all user input.",
+        )
+    ]
+    scan.mark_completed()
+    scans.update(scan)
+
+    reloaded = scans.get(scan.id)
+    assert reloaded is not None
+    f = reloaded.findings[0]
+    assert f.cvss is not None
+    assert f.cvss.version == "3.1"
+    assert f.cvss.vector == "CVSS:3.1/AV:N/AC:L"
+    assert f.cvss.base_score == 7.5
+    assert f.cwe_ids == ("CWE-79", "CWE-80")
+    assert f.owasp_categories == ("A03:2021-Injection",)
+    assert f.remediation == "Contextually encode all user input."
 
 
 def test_get_missing_returns_none(session_factory) -> None:

@@ -129,6 +129,9 @@ export function FindingsTable({ rows }: { rows: Finding[] }) {
           <TableHead className="w-24">Severity</TableHead>
           <TableHead>Finding</TableHead>
           <TableHead>Target</TableHead>
+          <TableHead className="w-32">CWE</TableHead>
+          <TableHead className="w-32">OWASP</TableHead>
+          <TableHead className="w-24">CVSS</TableHead>
           <TableHead className="w-32">Plugin</TableHead>
         </TableRow>
       </TableHeader>
@@ -143,9 +146,67 @@ export function FindingsTable({ rows }: { rows: Finding[] }) {
               {row.description && (
                 <p className="text-sm text-muted-foreground">{row.description}</p>
               )}
+              {row.remediation && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  💡 {row.remediation}
+                </p>
+              )}
             </TableCell>
             <TableCell>
               <ExternalLink href={row.target} />
+            </TableCell>
+            <TableCell className="text-sm font-mono">
+              {row.cwe_ids.length > 0 ? (
+                <div className="space-y-1">
+                  {row.cwe_ids.map((cwe) => (
+                    <Badge key={cwe} variant="outline" className="text-xs">
+                      {cwe}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </TableCell>
+            <TableCell className="text-sm font-mono">
+              {row.owasp_categories.length > 0 ? (
+                <div className="space-y-1">
+                  {row.owasp_categories.map((owasp) => (
+                    <Badge key={owasp} variant="secondary" className="text-xs">
+                      {owasp}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </TableCell>
+            <TableCell className="text-sm font-mono">
+              {row.cvss_base_score !== null && row.cvss_base_score !== undefined ? (
+                <>
+                  <Badge
+                    variant={
+                      row.cvss_base_score >= 9
+                        ? "destructive"
+                        : row.cvss_base_score >= 7
+                        ? "default"
+                        : row.cvss_base_score >= 4
+                        ? "secondary"
+                        : "outline"
+                    }
+                    className="text-xs"
+                  >
+                    {row.cvss_base_score.toFixed(1)}
+                  </Badge>
+                  {row.cvss_version && (
+                    <span className="text-xs text-muted-foreground ml-1">
+                      {row.cvss_version}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">{row.plugin}</TableCell>
           </TableRow>

@@ -86,3 +86,16 @@ run/persist first. Keeps milestones small and reviewable.
 non-bypassable scope/execution guard first.
 **Why:** Trust, safety, and legality. Automate the tedious surface first; AI is a
 force multiplier, not an autonomous hunter (yet). See `AGENTS_FUTURE.md`.
+
+---
+
+### ADR-015 — Advanced Finding model (Sprint 2 M2)
+**Decision:** Extend `Finding` with optional `cvss: Cvss`, `cwe_ids: tuple[str,...]`,
+`owasp_categories: tuple[str,...]`, `remediation: str|None`. Persist as nullable
+columns / JSON arrays; keep `severity` as plugin-decided (no auto-derive from
+CVSS until M6). CWE/OWASP are tuples stored as JSON arrays to support multiple
+mappings per finding without future migration. `references` and `evidence` stay
+as-is for M2 (richer evidence in M7).
+**Why:** Professional finding classification without breaking existing plugins or
+API/DB compatibility. JSON arrays for CWE/OWASP support multiple mappings
+without schema changes. Severity independence preserves plugin autonomy.

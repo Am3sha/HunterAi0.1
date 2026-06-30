@@ -62,7 +62,11 @@ Response `202`:
   "findings": [ {"id":"<uuid>","plugin":"security-headers","name":"Missing CSP",
                  "severity":"medium","target":"https://example.com",
                  "description":"...","confidence":"high","evidence":"...",
-                 "references":["..."],"metadata":{"header":"content-security-policy"}} ]
+                 "references":["..."],"metadata":{"header":"content-security-policy"},
+                 "cvss_version":"3.1","cvss_vector":"CVSS:3.1/AV:N/AC:L",
+                 "cvss_base_score":7.5,"cwe_ids":["CWE-79"],
+                 "owasp_categories":["A03:2021-Injection"],
+                 "remediation":"Encode output."} ]
 }
 ```
 - `404` if the scan id is unknown.

@@ -101,3 +101,10 @@ class FindingModel(Base):
     evidence: Mapped[str | None] = mapped_column(Text, nullable=True)
     references: Mapped[list[str]] = mapped_column(JSON, default=list)
     meta: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
+    # Sprint 2 M2: Advanced classification fields
+    cvss_version: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    cvss_vector: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cvss_base_score: Mapped[float | None] = mapped_column(nullable=True)
+    cwe_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    owasp_categories: Mapped[list[str]] = mapped_column(JSON, default=list)
+    remediation: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -41,6 +41,23 @@ class Confidence(str, Enum):
 
 
 @dataclass(frozen=True, slots=True)
+class Cvss:
+    """A CVSS score attached to a finding.
+
+    Immutable value object. ``severity`` is intentionally NOT derived from this in
+    Milestone 2 — severity remains the plugin's decision until the Sprint 2 M6 risk
+    scoring engine.
+    """
+
+    version: str
+    """CVSS version, e.g. ``"3.1"``."""
+    vector: str
+    """The CVSS vector string, e.g. ``"CVSS:3.1/AV:N/AC:L/..."``."""
+    base_score: float
+    """The CVSS base score (0.0–10.0)."""
+
+
+@dataclass(frozen=True, slots=True)
 class Finding:
     """A single issue reported by a scanner plugin."""
 
@@ -56,3 +73,12 @@ class Finding:
     references: tuple[str, ...] = ()
     metadata: dict[str, str] = field(default_factory=dict)
     id: UUID = field(default_factory=uuid4)
+    # --- Advanced classification (Sprint 2 M2; all optional, default empty) ---
+    cvss: Cvss | None = None
+    cwe_ids: tuple[str, ...] = ()
+    """Mapped CWE identifiers, e.g. ``("CWE-79",)``. Usually one, but multiple
+    mappings are supported without a future migration."""
+    owasp_categories: tuple[str, ...] = ()
+    """Mapped OWASP categories, e.g. ``("A03:2021-Injection",)``."""
+    remediation: str | None = None
+    """Free-text remediation guidance."""

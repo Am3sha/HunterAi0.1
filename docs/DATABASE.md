@@ -55,19 +55,25 @@ endpoints
   method    str(16) null
   source    str(64) null
 
-findings                      ← added in 0002 (Sprint 1 M2)
-  id          int PK
-  scan_id     UUID FK→scans.id (index)
-  uid         UUID            (domain Finding.id; stable identity)
-  plugin      str(64)  (index)
-  name        text
-  severity    str(16)  (index)   info|low|medium|high|critical
-  target      text
-  description text  default ''
-  confidence  str(16)            low|medium|high
-  evidence    text null
-  references  JSON  (list[str])
-  meta        JSON  (dict[str,str])   ← domain Finding.metadata (col renamed; ADR-013)
+findings                      ← added in 0002 (Sprint 1 M2); extended in 0003 (Sprint 2 M2)
+  id              int PK
+  scan_id         UUID FK→scans.id (index)
+  uid             UUID            (domain Finding.id; stable identity)
+  plugin          str(64)  (index)
+  name            text
+  severity        str(16)  (index)   info|low|medium|high|critical
+  target          text
+  description     text  default ''
+  confidence      str(16)            low|medium|high
+  evidence        text null
+  references      JSON  (list[str])
+  meta            JSON  (dict[str,str])   ← domain Finding.metadata (col renamed; ADR-013)
+  cvss_version    str(16)  null
+  cvss_vector     text null
+  cvss_base_score float    null
+  cwe_ids         JSON  (list[str])
+  owasp_categories JSON  (list[str])
+  remediation     text null
 ```
 
 Relationships: `scans` → `subdomains` / `http_services` / `endpoints` / `findings`

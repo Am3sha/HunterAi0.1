@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain.entities.finding import Confidence, Finding, Severity
+from app.domain.entities.finding import Confidence, Cvss, Finding, Severity
 from app.domain.entities.recon import Endpoint, HttpService, Subdomain
 from app.domain.entities.scan import Scan, ScanStatus
 from app.domain.entities.target import Target
@@ -107,6 +107,12 @@ class SqlAlchemyScanRepository:
                 evidence=f.evidence,
                 references=list(f.references),
                 meta=dict(f.metadata),
+                cvss_version=f.cvss.version if f.cvss else None,
+                cvss_vector=f.cvss.vector if f.cvss else None,
+                cvss_base_score=f.cvss.base_score if f.cvss else None,
+                cwe_ids=list(f.cwe_ids),
+                owasp_categories=list(f.owasp_categories),
+                remediation=f.remediation,
             )
             for f in scan.findings
         ]
@@ -147,6 +153,12 @@ def _to_domain(model: ScanModel) -> Scan:
                 evidence=f.evidence,
                 references=tuple(f.references or ()),
                 metadata=dict(f.meta or {}),
+                cvss=Cvss(version=f.cvss_version, vector=f.cvss_vector, base_score=f.cvss_base_score)
+                if f.cvss_version and f.cvss_vector and f.cvss_base_score is not None
+                else None,
+                cwe_ids=tuple(f.cwe_ids or ()),
+                owasp_categories=tuple(f.owasp_categories or ()),
+                remediation=f.remediation,
             )
             for f in model.findings
         ],

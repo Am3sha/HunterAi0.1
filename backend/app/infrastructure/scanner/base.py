@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping
 from typing import ClassVar
 
-from app.domain.entities.finding import Confidence, Finding, Severity
+from app.domain.entities.finding import Confidence, Cvss, Finding, Severity
 from app.domain.entities.scanner import PluginMetadata, ScanContext
 
 
@@ -50,6 +50,10 @@ class BaseScannerPlugin(ABC):
         evidence: str | None = None,
         references: Iterable[str] = (),
         metadata: Mapping[str, str] | None = None,
+        cvss: Cvss | None = None,
+        cwe_ids: Iterable[str] = (),
+        owasp_categories: Iterable[str] = (),
+        remediation: str | None = None,
     ) -> Finding:
         """Construct a Finding with this plugin's name pre-filled."""
         return Finding(
@@ -62,4 +66,8 @@ class BaseScannerPlugin(ABC):
             evidence=evidence,
             references=tuple(references),
             metadata=dict(metadata or {}),
+            cvss=cvss,
+            cwe_ids=tuple(cwe_ids),
+            owasp_categories=tuple(owasp_categories),
+            remediation=remediation,
         )
