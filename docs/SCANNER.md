@@ -147,6 +147,20 @@ They share a **scope-enforcing, read-only HTTP client** (`HttpClient` port,
 
 ---
 
+## Sprint 2 M3 — first advanced plugin (shipped)
+
+The **reflected XSS** plugin (`xss`) now ships under
+`infrastructure/scanner/plugins/`. It performs **safe, passive detection only**:
+sends harmless reflection markers and checks for unencoded reflection in response
+bodies. No exploitation, no bypasses, no aggressive fuzzing, no payload spraying.
+It fully populates the **Sprint 2 M2 Finding model** — `cvss`, `cwe_ids`,
+`owasp_categories`, and `remediation` — and respects `ScannerConfig.max_endpoints`
+and request timeouts via the shared `safe_get` helper.
+
+This brings the total to **six built-in plugins**.
+
+---
+
 ## Sprint 2 M1 — infrastructure seams (shipped)
 
 Additive architecture work to support future advanced plugins. **No behaviour

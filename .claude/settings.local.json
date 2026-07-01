@@ -11,7 +11,9 @@
       "Bash(./.venv-check/Scripts/python.exe -m pip install -q fastapi pydantic-settings \"SQLAlchemy>=2.0\" pytest pytest-asyncio httpx)",
       "Bash(npm -v)",
       "Bash(npm install *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(python -m pytest backend/tests/ -v)",
+      "Bash(python *)"
     ]
   }
 }

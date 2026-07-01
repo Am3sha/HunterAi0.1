@@ -1,14 +1,15 @@
-"""Tests for the five Milestone-3 scanner plugins."""
+"""Tests for the six Milestone-3 scanner plugins."""
 
 from __future__ import annotations
 
-from app.domain.entities.finding import Severity
-from app.domain.entities.scanner import ScanContext
+from app.domain.entities.finding import Confidence, Cvss, Finding, Severity
+from app.domain.entities.scanner import ScanContext, ScannerConfig
 from app.infrastructure.scanner.plugins.clickjacking import ClickjackingScanner
 from app.infrastructure.scanner.plugins.cookie_security import CookieSecurityScanner
 from app.infrastructure.scanner.plugins.cors import CorsScanner, _PROBE_ORIGIN
 from app.infrastructure.scanner.plugins.security_headers import SecurityHeadersScanner
 from app.infrastructure.scanner.plugins.tls_hygiene import TlsHygieneScanner
+from app.infrastructure.scanner.plugins.xss import XssScanner, REFLECTION_MARKERS
 from tests.scanner_fakes import FakeHttpClient, context_for, response
 
 URL = "https://example.com"
@@ -27,6 +28,7 @@ def test_plugins_noop_without_http_client() -> None:
         CorsScanner(),
         ClickjackingScanner(),
         TlsHygieneScanner(),
+        XssScanner(),
     ):
         assert plugin.scan(ctx) == []
 
@@ -37,6 +39,7 @@ def test_failed_request_yields_no_findings_not_an_exception() -> None:
     ctx = context_for([URL], client)
     # Must not raise; just produces nothing.
     assert SecurityHeadersScanner().scan(ctx) == []
+    assert XssScanner().scan(ctx) == []
 
 
 # --- security headers --------------------------------------------------------
@@ -162,3 +165,164 @@ def test_tls_weak_hsts_max_age_is_low() -> None:
     findings = TlsHygieneScanner().scan(context_for([URL], client))
     assert len(findings) == 1
     assert findings[0].metadata["hsts"] == "weak"
+
+
+# --- XSS (reflected) -----------------------------------------------------------
+def test_xss_noop_without_http_client() -> None:
+    ctx = ScanContext(target_domain="example.com")  # http=None
+    assert XssScanner().scan(ctx) == []
+
+
+def test_xss_failed_request_yields_no_findings() -> None:
+    endpoint = "https://example.com/search?q=test"
+    # No canned responses -> all requests fail -> no findings
+    client = FakeHttpClient({})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+    assert XssScanner().scan(ctx) == []
+
+
+def test_xss_reflection_detected_creates_finding_with_m2_fields() -> None:
+    """Marker reflected unencoded -> finding with CVSS, CWE, OWASP, remediation."""
+    endpoint = "https://example.com/search?q=test"
+    marker = REFLECTION_MARKERS[0]
+    # Body contains the marker exactly as sent (unencoded)
+    body = f"<html><body>Search results for: {marker}</body></html>"
+    # The plugin builds test URL by replacing param value with marker
+    test_url = endpoint.replace("test", marker)
+    client = FakeHttpClient({test_url: response(test_url, body=body)})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    findings = XssScanner().scan(ctx)
+
+    assert len(findings) == 1
+    f = findings[0]
+    assert f.plugin == "xss"
+    assert f.name == "Reflected XSS in parameter 'q'"
+    assert f.severity is Severity.MEDIUM
+    assert f.target == test_url  # final URL after redirects (none here)
+    assert f.confidence is Confidence.MEDIUM
+    assert marker in f.evidence
+    assert "q" in f.metadata["parameter"]
+    assert f.metadata["marker"] == marker
+
+    # M2 advanced fields
+    assert f.cvss is not None
+    assert f.cvss.version == "3.1"
+    assert f.cvss.base_score == 6.1
+    assert "AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" in f.cvss.vector
+    assert f.cwe_ids == ("CWE-79",)
+    assert f.owasp_categories == ("A03:2021-Injection",)
+    assert f.remediation is not None
+    assert "Contextually encode" in f.remediation
+    assert "Content Security Policy" in f.remediation
+
+
+def test_xss_no_reflection_no_finding() -> None:
+    """Marker NOT reflected -> no finding."""
+    endpoint = "https://example.com/search?q=test"
+    marker = REFLECTION_MARKERS[0]
+    # Body does NOT contain the marker
+    body = "<html><body>Search results for: something_else</body></html>"
+    test_url = endpoint.replace("test", marker)
+    client = FakeHttpClient({test_url: response(test_url, body=body)})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    assert XssScanner().scan(ctx) == []
+
+
+def test_xss_multiple_parameters_only_vulnerable_reported() -> None:
+    """Two params, only one reflects -> one finding."""
+    endpoint = "https://example.com/search?q=test&page=1"
+    marker = REFLECTION_MARKERS[0]
+    # Only 'q' reflects
+    body = f"<html><body>Results for {marker} on page 1</body></html>"
+    test_url = endpoint.replace("test", marker)  # q=test -> q=marker
+    client = FakeHttpClient({test_url: response(test_url, body=body)})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    findings = XssScanner().scan(ctx)
+
+    assert len(findings) == 1
+    assert findings[0].metadata["parameter"] == "q"
+
+
+def test_xss_respects_max_endpoints_limit() -> None:
+    """Only first max_endpoints endpoints are tested."""
+    # Create 3 endpoints, set max_endpoints=2
+    endpoints = [
+        f"https://example.com/search?q=test{i}" for i in range(3)
+    ]
+    # All reflect the marker
+    marker = REFLECTION_MARKERS[0]
+    responses = {
+        ep: response(ep, body=f"<html>{marker}</html>")
+        for ep in endpoints
+    }
+    # Need canned responses for the modified URLs with markers
+    for ep in endpoints:
+        test_url = ep.replace("test0", marker)  # this is wrong, let me think...
+    # Actually the plugin builds test URLs by replacing param values with markers
+    # So we need to add those to the responses
+    for ep in endpoints:
+        test_url_q = ep.replace("test0", marker).replace("test1", marker).replace("test2", marker)
+        # More precisely: the plugin uses with_param_value which replaces the param value
+        from app.infrastructure.scanner.plugins._params import with_param_value
+        test_url = with_param_value(ep, "q", marker)
+        responses[test_url] = response(test_url, body=f"<html>{marker}</html>")
+
+    client = FakeHttpClient(responses)
+    cfg = ScannerConfig(max_endpoints=2)
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        config=cfg,
+        endpoints=tuple(type("Endpoint", (), {"url": ep}) for ep in endpoints),
+    )
+
+    findings = XssScanner().scan(ctx)
+
+    # Only 2 endpoints tested -> 2 findings
+    assert len(findings) == 2
+
+
+def test_xss_uses_both_markers_stops_after_first_hit_per_param() -> None:
+    """If first marker reflects, second not tested for that param."""
+    endpoint = "https://example.com/search?q=test"
+    # First marker reflects
+    body = f"<html><body>{REFLECTION_MARKERS[0]}</body></html>"
+    # Need responses for both the original endpoint and the test URLs
+    from app.infrastructure.scanner.plugins._params import with_param_value
+    test_url_0 = with_param_value(endpoint, "q", REFLECTION_MARKERS[0])
+    responses = {
+        endpoint: response(endpoint, body=""),
+        test_url_0: response(test_url_0, body=body),
+    }
+    client = FakeHttpClient(responses)
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    findings = XssScanner().scan(ctx)
+
+    assert len(findings) == 1
+    # Only first marker should be in evidence
+    assert REFLECTION_MARKERS[0] in findings[0].evidence
+    assert REFLECTION_MARKERS[1] not in findings[0].evidence
