@@ -1,4 +1,4 @@
-"""Tests for the six Milestone-3 scanner plugins."""
+"""Tests for the seven Milestone-3 scanner plugins."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from app.infrastructure.scanner.plugins.cors import CorsScanner, _PROBE_ORIGIN
 from app.infrastructure.scanner.plugins.security_headers import SecurityHeadersScanner
 from app.infrastructure.scanner.plugins.tls_hygiene import TlsHygieneScanner
 from app.infrastructure.scanner.plugins.xss import XssScanner, REFLECTION_MARKERS
+from app.infrastructure.scanner.plugins.sqli import SqliScanner, ERROR_MARKERS
+from app.infrastructure.scanner.plugins._params import with_param_value
 from tests.scanner_fakes import FakeHttpClient, context_for, response
 
 URL = "https://example.com"
@@ -29,6 +31,7 @@ def test_plugins_noop_without_http_client() -> None:
         ClickjackingScanner(),
         TlsHygieneScanner(),
         XssScanner(),
+        SqliScanner(),
     ):
         assert plugin.scan(ctx) == []
 
@@ -40,6 +43,7 @@ def test_failed_request_yields_no_findings_not_an_exception() -> None:
     # Must not raise; just produces nothing.
     assert SecurityHeadersScanner().scan(ctx) == []
     assert XssScanner().scan(ctx) == []
+    assert SqliScanner().scan(ctx) == []
 
 
 # --- security headers --------------------------------------------------------
@@ -326,3 +330,198 @@ def test_xss_uses_both_markers_stops_after_first_hit_per_param() -> None:
     # Only first marker should be in evidence
     assert REFLECTION_MARKERS[0] in findings[0].evidence
     assert REFLECTION_MARKERS[1] not in findings[0].evidence
+
+
+# --- SQL Injection (error-based) ---------------------------------------------
+def test_sqli_noop_without_http_client() -> None:
+    ctx = ScanContext(target_domain="example.com")  # http=None
+    assert SqliScanner().scan(ctx) == []
+
+
+def test_sqli_failed_request_yields_no_findings() -> None:
+    endpoint = "https://example.com/search?q=test"
+    client = FakeHttpClient({})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+    assert SqliScanner().scan(ctx) == []
+
+
+def test_sqli_mysql_error_detected() -> None:
+    """MySQL error in response -> finding with M2 fields (provisional CVSS 5.3)."""
+    endpoint = "https://example.com/search?q=test"
+    marker = ERROR_MARKERS[0]  # '
+    test_url = with_param_value(endpoint, "q", marker)
+    body = "You have an error in your SQL syntax near '' at line 1"
+    client = FakeHttpClient({test_url: response(test_url, body=body)})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    findings = SqliScanner().scan(ctx)
+
+    assert len(findings) == 1
+    f = findings[0]
+    assert f.plugin == "sqli"
+    assert f.name == "Potential SQL Injection in parameter 'q'"
+    assert f.severity is Severity.MEDIUM
+    assert f.confidence is Confidence.MEDIUM
+    assert f.cvss is not None
+    assert f.cvss.base_score == 5.3
+    assert "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N" in f.cvss.vector
+    assert f.cwe_ids == ("CWE-89",)
+    assert f.owasp_categories == ("A03:2021-Injection",)
+    assert f.remediation is not None
+    assert "parameterized queries" in f.remediation.lower()
+    assert f.metadata["db_type"] == "mysql"
+
+
+def test_sqli_postgres_error_detected() -> None:
+    """PostgreSQL error in response -> finding."""
+    endpoint = "https://example.com/item?id=1"
+    marker = ERROR_MARKERS[0]
+    test_url = with_param_value(endpoint, "id", marker)
+    body = "syntax error at or near \"'\" at character 42"
+    client = FakeHttpClient({test_url: response(test_url, body=body)})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    findings = SqliScanner().scan(ctx)
+    assert len(findings) == 1
+    assert findings[0].metadata["db_type"] == "postgresql"
+
+
+def test_sqli_sqlserver_error_detected() -> None:
+    """SQL Server error in response -> finding."""
+    endpoint = "https://example.com/item?id=1"
+    marker = ERROR_MARKERS[0]
+    test_url = with_param_value(endpoint, "id", marker)
+    body = "Unclosed quotation mark after the character string '''."
+    client = FakeHttpClient({test_url: response(test_url, body=body)})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    findings = SqliScanner().scan(ctx)
+    assert len(findings) == 1
+    assert findings[0].metadata["db_type"] == "sqlserver"
+
+
+def test_sqli_oracle_error_detected() -> None:
+    """Oracle error in response -> finding."""
+    endpoint = "https://example.com/item?id=1"
+    marker = ERROR_MARKERS[0]
+    test_url = with_param_value(endpoint, "id", marker)
+    body = "ORA-00933: SQL command not properly ended"
+    client = FakeHttpClient({test_url: response(test_url, body=body)})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    findings = SqliScanner().scan(ctx)
+    assert len(findings) == 1
+    assert findings[0].metadata["db_type"] == "oracle"
+
+
+def test_sqli_sqlite_error_detected() -> None:
+    """SQLite error in response -> finding."""
+    endpoint = "https://example.com/item?id=1"
+    marker = ERROR_MARKERS[0]
+    test_url = with_param_value(endpoint, "id", marker)
+    body = "sqlite3.OperationalError: near \"'\": syntax error"
+    client = FakeHttpClient({test_url: response(test_url, body=body)})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    findings = SqliScanner().scan(ctx)
+    assert len(findings) == 1
+    assert findings[0].metadata["db_type"] == "sqlite"
+
+
+def test_sqli_no_db_error_no_finding() -> None:
+    """Generic error / no error -> no finding."""
+    endpoint = "https://example.com/search?q=test"
+    marker = ERROR_MARKERS[0]
+    test_url = with_param_value(endpoint, "q", marker)
+    body = "Internal Server Error: something went wrong"  # Not a DB error
+    client = FakeHttpClient({test_url: response(test_url, body=body)})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    assert SqliScanner().scan(ctx) == []
+
+
+def test_sqli_respects_max_endpoints_limit() -> None:
+    """Only first max_endpoints endpoints are tested."""
+    endpoints = [f"https://example.com/search?q=test{i}" for i in range(3)]
+    marker = ERROR_MARKERS[0]
+    responses = {}
+    for ep in endpoints:
+        test_url = with_param_value(ep, "q", marker)
+        responses[test_url] = response(test_url, body="You have an error in your SQL syntax")
+
+    client = FakeHttpClient(responses)
+    cfg = ScannerConfig(max_endpoints=2)
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        config=cfg,
+        endpoints=tuple(type("Endpoint", (), {"url": ep}) for ep in endpoints),
+    )
+
+    findings = SqliScanner().scan(ctx)
+    assert len(findings) == 2
+
+
+def test_sqli_multiple_parameters_only_vulnerable_reported() -> None:
+    """Two params, only one triggers DB error -> one finding."""
+    endpoint = "https://example.com/search?q=test&page=1"
+    marker = ERROR_MARKERS[0]
+    test_url_q = with_param_value(endpoint, "q", marker)
+    body = "You have an error in your SQL syntax near '' at line 1"
+    client = FakeHttpClient({test_url_q: response(test_url_q, body=body)})
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    findings = SqliScanner().scan(ctx)
+    assert len(findings) == 1
+    assert findings[0].metadata["parameter"] == "q"
+
+
+def test_sqli_uses_all_markers_stops_after_first_hit_per_param() -> None:
+    """If first marker triggers error, subsequent markers not tested for that param."""
+    endpoint = "https://example.com/search?q=test"
+    body = "You have an error in your SQL syntax near '' at line 1"
+    # Only first marker's test URL has a response
+    test_url_0 = with_param_value(endpoint, "q", ERROR_MARKERS[0])
+    responses = {test_url_0: response(test_url_0, body=body)}
+    client = FakeHttpClient(responses)
+    ctx = ScanContext(
+        target_domain="example.com",
+        http=client,
+        endpoints=(type("Endpoint", (), {"url": endpoint}),),
+    )
+
+    findings = SqliScanner().scan(ctx)
+    assert len(findings) == 1
+    assert findings[0].metadata["marker"] == ERROR_MARKERS[0]

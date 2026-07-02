@@ -161,6 +161,25 @@ This brings the total to **six built-in plugins**.
 
 ---
 
+## Sprint 2 M4 — error-based SQL Injection plugin (shipped)
+
+The **error-based SQL injection** plugin (`sqli`) now ships under
+`infrastructure/scanner/plugins/`. It performs **safe, passive detection only**:
+injects benign SQL syntax markers (single quote, double quote, backtick, double
+single quote) and checks for database error messages in response bodies. Supports
+MySQL, PostgreSQL, SQL Server, Oracle, and SQLite error signatures. No
+exploitation, no time-based payloads, no UNION attacks, no data extraction.
+It fully populates the **Sprint 2 M2 Finding model** — `cvss`, `cwe_ids`,
+`owasp_categories`, and `remediation` — and respects `ScannerConfig.max_endpoints`
+and request timeouts via the shared `safe_get` helper.
+
+**Finding consistency:** Confidence = Medium, Severity = Medium, CVSS = 5.3 MEDIUM
+(provisional; active verification required to confirm exploitable SQLi).
+
+This brings the total to **seven built-in plugins**.
+
+---
+
 ## Sprint 2 M1 — infrastructure seams (shipped)
 
 Additive architecture work to support future advanced plugins. **No behaviour
